@@ -118,7 +118,79 @@ int main(int argc, char const *argv[])
      * @brief 插入文档
      * 要将单个文档插入到集合中，请使用 mongocxx::collection 实例的 insert_one() 方法：
      */
-    auto result = coll.insert_one(doc_value.view());
+    try
+    {
+        auto result = coll.insert_one(doc_value.view());
+
+        // Currently, result will always be true (or an exception will be
+        // thrown).  Eventually, unacknowledged writes will give a false
+        // result. See https://jira.mongodb.org/browse/CXX-894
+
+        if (!result)
+        {
+            std::cout << "Unacknowledged write. No id available." << std::endl;
+            return EXIT_SUCCESS;
+        }
+
+        if (result->inserted_id().type() == bsoncxx::type::k_oid)
+        {
+            bsoncxx::oid id = result->inserted_id().get_oid().value;
+            std::string id_str = id.to_string();
+            std::cout << "Inserted id: " << id_str << std::endl;
+        }
+        else
+        {
+            std::cout << "Inserted id was not an OID type" << std::endl;
+        }
+    }
+    catch (const mongocxx::exception &e)
+    {
+        std::cout << "An exception occurred: " << e.what() << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    /**
+     * @brief 插入多个文档
+     * 要将多个文档插入到集合中，请使用 mongocxx::collection实例的 insert_many()方法，该方法接受要插入的文档列表。
+     */
+
+    std::vector<bsoncxx::document::value> documents;
+    for (int i = 0; i < 10; i++)
+    {
+        documents.push_back(bsoncxx::builder::stream::document{} << "i" << i << finalize);
+    }
+    auto results = coll.insert_many(documents);
+
+    for (int i = 0; i < results->inserted_count(); i++)
+    {
+        std::cout << "Inserted id [" << i << "]: " << results->inserted_ids().at(i).get_oid().value.to_string() << std::endl;
+    }
+
+    /**
+     * @brief 在集合中查找单个文档
+     * 
+     */
+    auto maybe_result = coll.find_one({});
+
+    if (maybe_result)
+    {
+        std::cout << bsoncxx::to_json(maybe_result->view()) << std::endl;
+    }
+    else
+    {
+        std::cout << "coll is null" << std::endl;
+    }
+
+    /**
+     * @brief 查找集合中的所有文档
+     * 
+     */
+    auto maybe_result_s = coll.find({});
+
+    for (auto &&doc : maybe_result_s)
+    {
+        std::cout << bsoncxx::to_json(doc) << std::endl;
+    }
 
     return 0;
 }
