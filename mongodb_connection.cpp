@@ -192,5 +192,63 @@ int main(int argc, char const *argv[])
         std::cout << bsoncxx::to_json(doc) << std::endl;
     }
 
+    /**
+     * @brief 获取与过滤器匹配的单个文档
+     * 
+     */
+
+    auto result_find = coll.find_one(document{} << "i" << 71 << finalize);
+    if (result_find)
+    {
+        std::cout << bsoncxx::to_json(result_find->view()) << std::endl;
+    }
+
+    /**
+     * @brief 获取与过滤器匹配的所有文档
+     * 
+     */
+
+    auto find_cursor = coll.find(document{} << "i" << open_document << "$gt" << 50 << "$lte" << 100 << close_document << finalize);
+    for (auto doc : find_cursor)
+    {
+        std::cout << bsoncxx::to_json(doc) << std::endl;
+    }
+
+    /**
+     * @brief 更新文档，更新单个文档
+     * 
+     */
+
+    coll.update_one(document{} << "i" << 10 << finalize,
+                    document{} << "$set" << open_document << "i" << 110 << close_document << finalize);
+
+    /**
+     * @brief 更新多个文档
+     * 
+     */
+    auto result_many = coll.update_many(document{} << "i" << open_document << "$lt" << 100 << close_document << finalize,
+                                        document{} << "$inc" << open_document << "i" << 100 << close_document << finalize);
+
+    /**
+     * @brief 删除文档，删除单个文档
+     * 
+     */
+
+    auto result_delete = coll.delete_one(document{} << "i" << 110 << finalize);
+
+    /**
+     * @brief 删除与过滤器匹配的所有文档
+     * 
+     */
+
+    auto delete_manay = coll.delete_many(document{} << "i" << open_document << "$gte" << 100 << close_document << finalize);
+    if (delete_manay)
+    {
+        std::cout << delete_manay->deleted_count() << std::endl;
+    }
+
+    auto index_specification = document{} << "i" << 1 << finalize;
+    coll.create_index(std::move(index_specification));
+
     return 0;
 }
